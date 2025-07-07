@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HDAM PROJECT CONTROL v3.0 | HOSS ENGINEERING</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+        :root {
+            --matrix-black: #0a0a0a;
+            --matrix-dark: #151515;
+            --matrix-medium: #1a1a1a;
+            --matrix-orange: #ff6600;
+            --matrix-orange-bright: #ff8800;
+            --matrix-green: #00ff00;
+            --matrix-red: #ff0000;
+            --matrix-blue: #00ccff;
+            --matrix-yellow: #ffcc00;
+            --text-primary: #ff6600;
+            --text-secondary: #ffaa00;
+            --text-dim: #cc5500;
+            --border-color: #ff6600;
+            --glow-color: #ff6600;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background: var(--matrix-black);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        /* Matrix Rain Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(255, 102, 0, 0.03) 2px,
+                    rgba(255, 102, 0, 0.03) 4px
+                ),
+                repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(255, 102, 0, 0.03) 2px,
+                    rgba(255, 102, 0, 0.03) 4px
+                );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Scanline Effect */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                rgba(255, 102, 0, 0.03) 50%,
+                transparent 50%
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 2;
+            animation: scanline 8s linear infinite;
+        }
+
+        @keyframes scanline {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(10px); }
+        }
+
+        /* Main Container */
+        .main-container {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .cyber-header {
+            background: linear-gradient(180deg, var(--matrix-dark) 0%, var(--matrix-medium) 100%);
+            border-bottom: 2px solid var(--border-color);
+            padding: 1.5rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cyber-header::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--matrix-orange);
+            box-shadow: 0 0 10px var(--glow-color);
+            animation: pulse-line 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-line {
+            0%, 100% { opacity: 0.5; transform: scaleX(0.5); }
+            50% { opacity: 1; transform: scaleX(1); }
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 3rem;
+        }
+
+        .logo-container {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .logo-frame {
+            background: var(--matrix-black);
+            border: 2px solid var(--border-color);
+            padding: 1rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .logo-frame img {
+            height: 60px;
+            filter: brightness(0.9);
+            position: relative;
+            z-index: 1;
+        }
+
+        .project-info {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .project-title {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 20px var(--glow-color);
+        }
+
+        .project-details {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            line-height: 1.6;
+        }
+
+        /* Status Panel */
+        .status-panel {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--matrix-black);
+            border: 1px solid var(--border-color);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .status-dot.online { background: var(--matrix-green); box-shadow: 0 0 10px var(--matrix-green); }
+        .status-dot.sync { background: var(--matrix-blue); box-shadow: 0 0 10px var(--matrix-blue); }
+        .status-dot.local { background: var(--matrix-yellow); box-shadow: 0 0 10px var(--matrix-yellow); }
+
+        /* Navigation Breadcrumb */
+        .breadcrumb {
+            max-width: 1400px;
+            margin: 1rem auto;
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: var(--text-dim);
+        }
+
+        .breadcrumb-item {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .breadcrumb-item:hover {
+            color: var(--text-primary);
+            text-shadow: 0 0 10px var(--glow-color);
+        }
+
+        .breadcrumb-separator {
+            color: var(--text-dim);
+        }
+
+        /* Control Panel */
+        .control-panel {
+            max-width: 1400px;
+            margin: 0 auto 2rem;
+            padding: 0 2rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-module {
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.875rem 1rem 0.875rem 3rem;
+            background: var(--matrix-dark);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1rem;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            box-shadow: 0 0 20px rgba(255, 102, 0, 0.5);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .filter-btn {
+            padding: 0.875rem 1.5rem;
+            background: var(--matrix-dark);
+            border: 2px solid var(--border-color);
+            color: var(--text-primary);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn.active {
+            background: var(--matrix-orange);
+            color: var(--matrix-black);
+            box-shadow: 0 0 20px rgba(255, 102, 0, 0.5);
+        }
+
+        .sync-btn {
+            padding: 0.875rem 1.5rem;
+            background: var(--matrix-dark);
+            border: 2px solid var(--matrix-blue);
+            color: var(--matrix-blue);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .sync-btn:hover {
+            background: var(--matrix-blue);
+            color: var(--matrix-black);
+            box-shadow: 0 0 20px rgba(0, 204, 255, 0.5);
+        }
+
+        .sync-btn.syncing {
+            animation: sync-pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes sync-pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* Discipline Cards Grid */
+        .disciplines-grid {
+            max-width: 1400px;
+            margin: 0 auto 2rem;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .discipline-card {
+            background: var(--matrix-dark);
+            border: 2px solid var(--border-color);
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .discipline-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--matrix-orange), transparent);
+            animation: scan 3s linear infinite;
+        }
+
+        .discipline-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 102, 0, 0.3);
+        }
+
+        .discipline-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            filter: drop-shadow(0 0 20px currentColor);
+        }
+
+        .discipline-card.architecture .discipline-icon { color: var(--matrix-orange); }
+        .discipline-card.structure .discipline-icon { color: var(--matrix-red); }
+        .discipline-card.hydraulic .discipline-icon { color: var(--matrix-blue); }
+        .discipline-card.metallic .discipline-icon { color: var(--matrix-green); }
+
+        .discipline-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .discipline-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: auto;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 102, 0, 0.3);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+        }
+
+        /* Data Table Container */
+        .data-container {
+            max-width: 1400px;
+            margin: 0 auto 2rem;
+            padding: 0 2rem;
+            display: none;
+        }
+
+        .data-container.active {
+            display: block;
+        }
+
+        .data-table {
+            width: 100%;
+            background: var(--matrix-dark);
+            border: 2px solid var(--border-color);
+            border-collapse: separate;
+            border-spacing: 0;
+            overflow: hidden;
+        }
+
+        .data-table thead {
+            background: var(--matrix-black);
+        }
+
+        .data-table th {
+            padding: 1rem;
+            text-align: left;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .data-table td {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid rgba(255, 102, 0, 0.2);
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .data-table tbody tr:hover {
+            background: rgba(255, 102, 0, 0.1);
+        }
+
+        .folder-cell {
+            font-weight: 700;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            background: rgba(255, 102, 0, 0.1);
+            border-right: 2px solid var(--border-color);
+            text-align: center;
+        }
+
+        .file-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .file-link:hover {
+            color: var(--text-primary);
+            text-shadow: 0 0 10px var(--glow-color);
+        }
+
+        .file-type-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            border: 1px solid;
+        }
+
+        .file-type-badge.dwg {
+            color: var(--matrix-blue);
+            border-color: var(--matrix-blue);
+            background: rgba(0, 204, 255, 0.1);
+        }
+
+        .file-type-badge.pdf {
+            color: var(--matrix-red);
+            border-color: var(--matrix-red);
+            background: rgba(255, 0, 0, 0.1);
+        }
+
+        .action-btn {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--text-dim);
+            color: var(--text-dim);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            border-color: var(--matrix-orange);
+            color: var(--matrix-orange);
+            box-shadow: 0 0 10px rgba(255, 102, 0, 0.5);
+        }
+
+        /* Terminal Footer */
+        .terminal-footer {
+            background: var(--matrix-black);
+            border-top: 2px solid var(--border-color);
+            padding: 1rem 0;
+            margin-top: auto;
+        }
+
+        .terminal-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            font-size: 0.875rem;
+            color: var(--text-dim);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Loading Modal */
+        .loading-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--matrix-dark);
+            border: 2px solid var(--matrix-orange);
+            padding: 2rem 3rem;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 0 50px rgba(255, 102, 0, 0.5);
+        }
+
+        .loading-modal.active {
+            display: block;
+        }
+
+        .loading-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .loading-bar {
+            width: 300px;
+            height: 4px;
+            background: var(--matrix-black);
+            margin-top: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .loading-bar::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--matrix-orange);
+            animation: loading-progress 2s ease-in-out infinite;
+        }
+
+        @keyframes loading-progress {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        /* PDF Viewer Modal */
+        .pdf-viewer-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pdf-viewer-modal.active {
+            display: flex;
+        }
+
+        .pdf-viewer-container {
+            width: 90%;
+            height: 90%;
+            background: var(--matrix-dark);
+            border: 2px solid var(--matrix-orange);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pdf-viewer-header {
+            background: var(--matrix-black);
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--matrix-orange);
+        }
+
+        .pdf-viewer-title {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--text-primary);
+            font-size: 1rem;
+            text-transform: uppercase;
+        }
+
+        .pdf-viewer-close {
+            background: transparent;
+            border: 1px solid var(--matrix-red);
+            color: var(--matrix-red);
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-family: 'Share Tech Mono', monospace;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+
+        .pdf-viewer-close:hover {
+            background: var(--matrix-red);
+            color: var(--matrix-black);
+        }
+
+        .pdf-viewer-content {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .pdf-viewer-content embed,
+        .pdf-viewer-content iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Notes Input */
+        .notes-input {
+            width: 100%;
+            padding: 0.5rem;
+            background: var(--matrix-black);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .notes-input:focus {
+            outline: none;
+            border-color: var(--matrix-orange);
+            box-shadow: 0 0 5px rgba(255, 102, 0, 0.5);
+        }
+
+        .notes-input::placeholder {
+            color: var(--text-dim);
+            opacity: 0.5;
+        }
+
+        /* Initial Loading */
+        .initial-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--matrix-black);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            flex-direction: column;
+        }
+
+        .initial-loading.hidden {
+            display: none;
+        }
+
+        .loading-logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem;
+            font-weight: 900;
+            color: var(--matrix-orange);
+            text-shadow: 0 0 30px var(--glow-color);
+            margin-bottom: 2rem;
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.8; text-shadow: 0 0 20px var(--glow-color); }
+            50% { opacity: 1; text-shadow: 0 0 40px var(--glow-color); }
+        }
+
+        .loading-progress {
+            width: 400px;
+            height: 4px;
+            background: var(--matrix-dark);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .loading-progress::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, var(--matrix-orange), transparent);
+            animation: loading-scan 1.5s ease-in-out infinite;
+        }
+
+        @keyframes loading-scan {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .loading-status {
+            margin-top: 1rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+
+            .disciplines-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .control-panel {
+                flex-direction: column;
+            }
+
+            .search-module {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Initial Loading Screen -->
+    <div class="initial-loading" id="initialLoading">
+        <div class="loading-logo">HDAM CONTROL</div>
+        <div class="loading-progress"></div>
+        <div class="loading-status">INITIALIZING SYSTEM...</div>
+    </div>
+
+    <div class="main-container">
+        <!-- Cyber Header -->
+        <header class="cyber-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <div class="logo-container">
+                        <div class="logo-frame">
+                            <img src="https://www.construtorahoss.com.br/wp-content/uploads/2023/04/50-anos-LOGO-HOSS-CONSTRUTORA-com-50-anos.png" alt="HOSS">
+                        </div>
+                        <div class="logo-frame">
+                            <img src="https://cdn.worldvectorlogo.com/logos/honda-motorcycles-1.svg" alt="HONDA">
+                        </div>
+                    </div>
+                    <div class="project-info">
+                        <h1 class="project-title">HDAM PROJECT CONTROL</h1>
+                        <div class="project-details">
+                            <div>REFORMA PRÉDIO ADMINISTRATIVO</div>
+                            <div>MOTO HONDA DA AMAZÔNIA</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="status-panel">
+                    <div class="status-indicator">
+                        <div class="status-dot online"></div>
+                        <span>SYSTEM ONLINE</span>
+                    </div>
+                    <div class="status-indicator" id="syncStatus">
+                        <div class="status-dot local"></div>
+                        <span>LOCAL MODE</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Breadcrumb -->
+        <div class="breadcrumb" id="breadcrumb">
+            <span class="breadcrumb-item" onclick="navigateToHome()">HOME</span>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <div class="search-module">
+                <span style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);">🔍</span>
+                <input type="text" 
+                       class="search-input" 
+                       id="searchInput" 
+                       placeholder="SEARCH ALL FILES..."
+                       onkeyup="globalSearch()">
+            </div>
+            <div class="filter-group">
+                <button class="sync-btn" onclick="syncFiles()" id="syncBtn">
+                    <span>🔄</span>
+                    <span>SYNC FILES</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Disciplines Grid -->
+        <div class="disciplines-grid" id="disciplinesGrid">
+            <div class="discipline-card architecture" onclick="openDiscipline('architecture')">
+                <div class="discipline-icon">📐</div>
+                <h2 class="discipline-title">ARQUITETURA</h2>
+                <div class="discipline-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="arch-files">46</div>
+                        <div class="stat-label">Files</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="arch-folders">6</div>
+                        <div class="stat-label">Folders</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="arch-size">287MB</div>
+                        <div class="stat-label">Size</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="discipline-card structure" onclick="openDiscipline('structure')">
+                <div class="discipline-icon">🏗️</div>
+                <h2 class="discipline-title">ESTRUTURA</h2>
+                <div class="discipline-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="struct-files">0</div>
+                        <div class="stat-label">Files</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="struct-folders">0</div>
+                        <div class="stat-label">Folders</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="struct-size">0MB</div>
+                        <div class="stat-label">Size</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="discipline-card hydraulic" onclick="openDiscipline('hydraulic')">
+                <div class="discipline-icon">💧</div>
+                <h2 class="discipline-title">HIDRÁULICA</h2>
+                <div class="discipline-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="hydro-files">0</div>
+                        <div class="stat-label">Files</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="hydro-folders">0</div>
+                        <div class="stat-label">Folders</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="hydro-size">0MB</div>
+                        <div class="stat-label">Size</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="discipline-card metallic" onclick="openDiscipline('metallic')">
+                <div class="discipline-icon">⚙️</div>
+                <h2 class="discipline-title">METÁLICA</h2>
+                <div class="discipline-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="metal-files">0</div>
+                        <div class="stat-label">Files</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="metal-folders">0</div>
+                        <div class="stat-label">Folders</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="metal-size">0MB</div>
+                        <div class="stat-label">Size</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Table Container -->
+        <div class="data-container" id="dataContainer">
+            <table class="data-table" id="fileTable">
+                <thead>
+                    <tr>
+                        <th style="width: 150px;">LOCATION</th>
+                        <th style="width: 60px;">TYPE</th>
+                        <th>FILE NAME</th>
+                        <th style="width: 100px;">FORMAT</th>
+                        <th style="width: 120px;">MODIFIED</th>
+                        <th style="width: 300px;">NOTES</th>
+                    </tr>
+                </thead>
+                <tbody id="fileTableBody">
+                    <!-- Dynamic content will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Terminal Footer -->
+        <footer class="terminal-footer">
+            <div class="terminal-content">
+                <div class="terminal-text">HDAM CONTROL SYSTEM v3.0 | HOSS ENGINEERING © 2025</div>
+                <div class="system-time" id="systemTime">00:00:00</div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="loading-modal" id="loadingModal">
+        <div class="loading-text">SYNCING FILES...</div>
+        <div class="loading-bar"></div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            driveUrl: 'https://drive.google.com/drive/folders/1ERp2VogX3C-Xh_pOfORRvXRN-_twFoZq',
+            localPath: 'I:\\Meu Drive\\DRIVE PREDIO ADM',
+            useLocalMode: true, // Toggle between local and API mode
+            autoSyncInterval: 300000 // 5 minutes
+        };
+
+        // File system structure (mock data for now)
+        const fileSystem = {
+            architecture: {
+                name: 'ARQUITETURA',
+                path: 'ARQUITETURA',
+                files: [
+                    // Root files
+                    { name: '1001-1004 - PLANTAS TERREO.dwg', type: 'dwg', size: '8.7MB', modified: '2025-03-14', path: '' },
+                    { name: '1005-1008 - PLANTAS 1 PAVIMENTO.DWG', type: 'dwg', size: '11.6MB', modified: '2025-07-01', path: '' },
+                    { name: '1013-1018 - PLANTAS DE COBERTURA.DWG', type: 'dwg', size: '13.3MB', modified: '2025-07-01', path: '' },
+                    { name: '1019 - DETALHES BANHEIROS TÉRREO, 1º E 2º PAVIMENTOS E COBERTURA 2.dwg', type: 'dwg', size: '5.0MB', modified: '2025-07-01', path: '' },
+                    { name: '1019 - DETALHES BANHEIROS TÉRREO, 1º E 2º PAVIMENTOS E COBERTURA.dwg', type: 'dwg', size: '5.2MB', modified: '2025-07-01', path: '' },
+                    { name: '1020-2021 - ELEVAÇÕES.dwg', type: 'dwg', size: '8.0MB', modified: '2025-07-01', path: '' },
+                    { name: '1023-1026 - PLANTAS 2 PAVIMENTO.DWG', type: 'dwg', size: '22.4MB', modified: '2025-07-01', path: '' },
+                    { name: '1027-1030 - PLANTAS DE FORRO.dwg', type: 'dwg', size: '11.0MB', modified: '2025-07-01', path: '' },
+                    // PAV-TERREO
+                    { name: '1001 - PLANTA TÉRREO - ATUAL E DEMOLIÇÃO.pdf', type: 'pdf', size: '1.2MB', modified: '2025-07-01', path: 'PAV-TERREO' },
+                    { name: '1002 - PLANTA TÉRREO - CONSTRUÇÃO E LAYOUT.pdf', type: 'pdf', size: '1.8MB', modified: '2025-07-01', path: 'PAV-TERREO' },
+                    { name: '1003- PLANTA 1 º PAVIMENTO - ATUAL E DEMOLIÇÃO.pdf', type: 'pdf', size: '0.4MB', modified: '2025-07-01', path: 'PAV-TERREO' },
+                    { name: '1004 - PLANTA 1º PAVIMENTO - CONSTRUÇÃO E LAYOUT.pdf', type: 'pdf', size: '0.9MB', modified: '2025-07-01', path: 'PAV-TERREO' },
+                    { name: '1023 - PLANTA TERREO -  PAGINAÇÃO DE PISO.pdf', type: 'pdf', size: '0.4MB', modified: '2025-07-01', path: 'PAV-TERREO' },
+                    { name: '1027 - PLANTA DE FORRO - TÉRREO E 1º PAVIMENTO.pdf', type: 'pdf', size: '0.6MB', modified: '2025-07-01', path: 'PAV-TERREO' },
+                    { name: 'HDAM.PADM.PB.1001E1002.TERREO.R05.dwg', type: 'dwg', size: '8.7MB', modified: '2025-03-14', path: 'PAV-TERREO' },
+                    // Continue with other folders...
+                ],
+                folders: ['PAV-TERREO', 'PAV1', 'PAV2', 'PAV-COB', 'CORTES E ELEVAÇÕES', 'BANHEIROS']
+            },
+            structure: {
+                name: 'ESTRUTURA',
+                path: 'ESTRUTURA',
+                files: [],
+                folders: []
+            },
+            hydraulic: {
+                name: 'HIDRÁULICA',
+                path: 'HIDRAULICA',
+                files: [],
+                folders: []
+            },
+            metallic: {
+                name: 'METÁLICA',
+                path: 'METALICA',
+                files: [],
+                folders: []
+            }
+        };
+
+        // Current state
+        let currentDiscipline = null;
+        let currentPath = [];
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => {
+            // Show initial loading
+            setTimeout(() => {
+                document.getElementById('initialLoading').classList.add('hidden');
+            }, 2000);
+            
+            updateSystemTime();
+            setInterval(updateSystemTime, 1000);
+            
+            // Load saved notes
+            loadSavedNotes();
+            
+            // Set sync mode indicator
+            updateSyncStatus();
+            
+            // Auto sync if enabled
+            if (!CONFIG.useLocalMode && CONFIG.autoSyncInterval) {
+                setInterval(syncFiles, CONFIG.autoSyncInterval);
+            }
+        });
+
+        // Load saved notes from localStorage
+        function loadSavedNotes() {
+            const savedNotes = localStorage.getItem('fileNotes');
+            if (savedNotes) {
+                const notes = JSON.parse(savedNotes);
+                Object.keys(fileSystem).forEach(discipline => {
+                    fileSystem[discipline].files.forEach(file => {
+                        const noteKey = `${discipline}_${file.name}`;
+                        if (notes[noteKey]) {
+                            file.notes = notes[noteKey];
+                        }
+                    });
+                });
+            }
+        }
+
+        // Save note for a file
+        function saveNote(discipline, fileName, note) {
+            const savedNotes = localStorage.getItem('fileNotes');
+            const notes = savedNotes ? JSON.parse(savedNotes) : {};
+            const noteKey = `${discipline}_${fileName}`;
+            
+            if (note.trim()) {
+                notes[noteKey] = note;
+            } else {
+                delete notes[noteKey];
+            }
+            
+            localStorage.setItem('fileNotes', JSON.stringify(notes));
+            
+            // Update file system object
+            const file = fileSystem[discipline].files.find(f => f.name === fileName);
+            if (file) {
+                file.notes = note;
+            }
+        }
+
+        // Show loading animation
+        function showLoading() {
+            const modal = document.getElementById('loadingModal');
+            modal.classList.add('active');
+        }
+
+        // Hide loading animation
+        function hideLoading() {
+            const modal = document.getElementById('loadingModal');
+            modal.classList.remove('active');
+        }
+
+        // Update system time
+        function updateSystemTime() {
+            const now = new Date();
+            const time = now.toTimeString().split(' ')[0];
+            document.getElementById('systemTime').textContent = time;
+        }
+
+        // Update sync status
+        function updateSyncStatus() {
+            const indicator = document.getElementById('syncStatus');
+            if (CONFIG.useLocalMode) {
+                indicator.innerHTML = '<div class="status-dot local"></div><span>LOCAL MODE</span>';
+            } else {
+                indicator.innerHTML = '<div class="status-dot sync"></div><span>CLOUD SYNC</span>';
+            }
+        }
+
+        // Navigate to home
+        function navigateToHome() {
+            currentDiscipline = null;
+            currentPath = [];
+            document.getElementById('disciplinesGrid').style.display = 'grid';
+            document.getElementById('dataContainer').classList.remove('active');
+            updateBreadcrumb();
+        }
+
+        // Open discipline
+        function openDiscipline(discipline) {
+            currentDiscipline = discipline;
+            currentPath = [fileSystem[discipline].name];
+            document.getElementById('disciplinesGrid').style.display = 'none';
+            document.getElementById('dataContainer').classList.add('active');
+            updateBreadcrumb();
+            loadFiles(discipline);
+        }
+
+        // Update breadcrumb
+        function updateBreadcrumb() {
+            const breadcrumb = document.getElementById('breadcrumb');
+            let html = '<span class="breadcrumb-item" onclick="navigateToHome()">HOME</span>';
+            
+            if (currentPath.length > 0) {
+                currentPath.forEach((item, index) => {
+                    html += ' <span class="breadcrumb-separator">></span> ';
+                    html += `<span class="breadcrumb-item" onclick="navigateToPath(${index})">${item}</span>`;
+                });
+            }
+            
+            breadcrumb.innerHTML = html;
+        }
+
+        // Navigate to specific path
+        function navigateToPath(index) {
+            currentPath = currentPath.slice(0, index + 1);
+            updateBreadcrumb();
+            loadFiles(currentDiscipline);
+        }
+
+        // Load files for current discipline
+        function loadFiles(discipline) {
+            const tbody = document.getElementById('fileTableBody');
+            const data = fileSystem[discipline];
+            let html = '';
+            
+            // Show loading animation
+            showLoading();
+            
+            // Group files by folder
+            const grouped = {};
+            data.files.forEach(file => {
+                const folder = file.path || 'ROOT';
+                if (!grouped[folder]) grouped[folder] = [];
+                grouped[folder].push(file);
+            });
+            
+            // Render files
+            Object.entries(grouped).forEach(([folder, files]) => {
+                files.forEach((file, index) => {
+                    const isFirst = index === 0;
+                    const fileIcon = file.type === 'dwg' ? '📐' : '📄';
+                    const badgeClass = file.type === 'dwg' ? 'dwg' : 'pdf';
+                    const fileName = file.name.replace(/\.(dwg|pdf)$/i, '');
+                    const action = file.type === 'pdf' 
+                        ? `onclick="openFile('${file.path ? file.path + '/' : ''}${file.name}', '${file.type}')"`
+                        : `onclick="openFile('${file.path ? file.path + '/' : ''}${file.name}', '${file.type}')"`;
+                    
+                    const notes = file.notes || '';
+                    
+                    html += `
+                        <tr>
+                            ${isFirst ? `<td class="folder-cell" rowspan="${files.length}">// ${folder}</td>` : ''}
+                            <td>${fileIcon}</td>
+                            <td><a href="#" class="file-link" ${action}>${fileName}</a></td>
+                            <td><span class="file-type-badge ${badgeClass}">[${file.type.toUpperCase()}]</span></td>
+                            <td>${file.modified}</td>
+                            <td>
+                                <input type="text" 
+                                       class="notes-input" 
+                                       value="${notes}" 
+                                       placeholder="Adicionar nota..."
+                                       onchange="saveNote('${discipline}', '${file.name}', this.value)"
+                                       data-file="${file.name}">
+                            </td>
+                        </tr>
+                    `;
+                });
+            });
+            
+            tbody.innerHTML = html;
+            
+            // Hide loading after render
+            setTimeout(hideLoading, 500);
+        }
+
+        // Open file (unified for both DWG and PDF)
+        function openFile(filePath, type) {
+            if (CONFIG.useLocalMode) {
+                const disciplinePath = fileSystem[currentDiscipline].path;
+                const fullPath = `${CONFIG.localPath}\\${disciplinePath}\\${filePath}`;
+                console.log('[SYSTEM] Opening file:', fullPath);
+
+                const link = document.createElement('a');
+                link.href = `file:///${fullPath.replace(/\\/g, '/')}`;
+                link.target = '_blank';
+                link.click();
+            }
+            else {
+                window.open(filePath, '_blank');
+            }
+        }
+
+
+        // Download file
+        function downloadFile(filePath) {
+            if (CONFIG.useLocalMode) {
+                const fullPath = `${CONFIG.localPath}\\ARQUITETURA\\${filePath}`;
+                console.log('[SYSTEM] Download not available in local mode:', fullPath);
+                alert('Para baixar arquivos, use o modo cloud ou copie diretamente da pasta.');
+            } else {
+                // For cloud mode, trigger download
+                const link = document.createElement('a');
+                link.href = filePath;
+                link.download = filePath.split('/').pop();
+                link.click();
+            }
+        }
+
+        // Global search
+        function globalSearch() {
+            const query = document.getElementById('searchInput').value.toUpperCase();
+            
+            if (currentDiscipline && document.getElementById('dataContainer').classList.contains('active')) {
+                // Search in current table
+                const rows = document.querySelectorAll('#fileTableBody tr');
+                rows.forEach(row => {
+                    const text = row.textContent.toUpperCase();
+                    row.style.display = text.includes(query) ? '' : 'none';
+                });
+            } else {
+                // TODO: Implement global search across all disciplines
+                console.log('[SEARCH] Global search:', query);
+            }
+        }
+
+        // Sync files
+        async function syncFiles() {
+            const btn = document.getElementById('syncBtn');
+            const modal = document.getElementById('loadingModal');
+            
+            btn.classList.add('syncing');
+            modal.classList.add('active');
+            
+            try {
+                if (CONFIG.useLocalMode) {
+                    // For local mode, we would use fs API or electron
+                    await simulateSync();
+                } else {
+                    // For cloud mode, use Google Drive API
+                    await syncWithGoogleDrive();
+                }
+                
+                console.log('[SYNC] Files synchronized successfully');
+            } catch (error) {
+                console.error('[SYNC] Error:', error);
+                alert('Sync failed. Check console for details.');
+            } finally {
+                btn.classList.remove('syncing');
+                modal.classList.remove('active');
+            }
+        }
+
+        // Simulate sync for demo
+        async function simulateSync() {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    console.log('[SYNC] Simulated sync complete');
+                    resolve();
+                }, 2000);
+            });
+        }
+
+        // Google Drive sync (placeholder)
+        async function syncWithGoogleDrive() {
+            // This would implement actual Google Drive API integration
+            console.log('[SYNC] Google Drive sync not implemented yet');
+            return simulateSync();
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + F for search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                document.getElementById('searchInput').focus();
+            }
+            
+            // ESC to go back
+            if (e.key === 'Escape') {
+                if (currentDiscipline) {
+                    navigateToHome();
+                }
+            }
+            
+            // Ctrl/Cmd + R to sync
+            if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+                e.preventDefault();
+                syncFiles();
+            }
+        });
+    </script>
+    <script src="file_loader.js"></script>
+</body>
+</html>
