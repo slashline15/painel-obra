@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 from drive_scanner import DriveScanner
-from auth import auth_manager, get_current_user, get_current_user_optional
+from auth import auth_manager, get_current_user
 from pydantic import BaseModel
 
 # Carregar variáveis de ambiente
