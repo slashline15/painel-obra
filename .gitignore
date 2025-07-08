@@ -7,3 +7,5 @@ credentials/
 *.pyc
 index.html.bak
 *.bak
+__pycache__
+*.bak
