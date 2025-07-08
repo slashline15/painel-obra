@@ -9,3 +9,15 @@ index.html.bak
 *.bak
 __pycache__
 *.bak
+
+# Project specific
+file_data.json
+file_notes.json
+!authorized_emails.json
+
+# Sensitive files
+*.key
+*.pem
+*.cert
+*.crt
+secret*

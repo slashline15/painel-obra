@@ -6,6 +6,8 @@
 # apscheduler==3.10.4
 # python-dotenv==1.0.0
 # python-multipart==0.0.6
+# python-jose[cryptography]==3.3.0
+# passlib[bcrypt]==1.7.4
 
 # ---- REQUERIMENTS INSTALADOS --------
 annotated-types==0.7.0
@@ -48,3 +50,5 @@ urllib3==2.5.0
 uvicorn==0.35.0
 watchfiles==1.1.0
 websockets==15.0.1
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4

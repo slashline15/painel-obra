@@ -945,6 +945,41 @@
     </div>
 
     <script>
+        // Verificação de autenticação
+        function checkAuth() {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                window.location.href = '/login';
+                return false;
+            }
+            
+            // Verifica se o token é válido
+            fetch('/api/auth/verify', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            }).then(res => {
+                if (!res.ok) {
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('user_info');
+                    window.location.href = '/login';
+                }
+            }).catch(() => {
+                window.location.href = '/login';
+            });
+            
+            return true;
+        }
+
+        // Adiciona headers de autenticação a todas as requisições
+        function getAuthHeaders() {
+            const token = localStorage.getItem('access_token');
+            return {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+        }
+
         // Configuration
         const CONFIG = {
             driveUrl: 'https://drive.google.com/drive/folders/1ERp2VogX3C-Xh_pOfORRvXRN-_twFoZq',
@@ -967,6 +1002,31 @@
 
         // Initialize
         window.addEventListener('DOMContentLoaded', () => {
+            // Verifica autenticação primeiro
+            if (!checkAuth()) {
+                return;
+            }
+
+            // Carrega informações do usuário
+            const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+            if (userInfo.name) {
+                // Adiciona informações do usuário no header (opcional)
+                const headerContent = document.querySelector('.header-content');
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-info';
+                userDiv.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        ${userInfo.picture ? `<img src="${userInfo.picture}" alt="${userInfo.name}" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--matrix-orange);">` : ''}
+                        <div style="text-align: right;">
+                            <div style="font-size: 0.875rem; color: var(--text-primary);">${userInfo.name}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-dim);">${userInfo.email}</div>
+                        </div>
+                        <button onclick="logout()" style="padding: 0.5rem 1rem; background: transparent; border: 1px solid var(--matrix-red); color: var(--matrix-red); cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; text-transform: uppercase; transition: all 0.3s ease;">LOGOUT</button>
+                    </div>
+                `;
+                headerContent.appendChild(userDiv);
+            }
+
             // Show initial loading
             setTimeout(() => {
                 document.getElementById('initialLoading').classList.add('hidden');
@@ -981,11 +1041,83 @@
             // Set sync mode indicator
             updateSyncStatus();
             
+            // Load initial data
+            loadInitialData();
+            
             // Auto sync if enabled
             if (!CONFIG.useLocalMode && CONFIG.autoSyncInterval) {
                 setInterval(syncFiles, CONFIG.autoSyncInterval);
             }
         });
+
+        // Função de logout
+        function logout() {
+            if (confirm('Deseja realmente sair do sistema?')) {
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('user_info');
+                window.location.href = '/login';
+            }
+        }
+
+        // Carrega dados iniciais do servidor
+        async function loadInitialData() {
+            try {
+                const response = await fetch('/api/files', {
+                    headers: getAuthHeaders()
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.disciplines) {
+                        // Atualiza o fileSystem com os dados do servidor
+                        Object.keys(data.disciplines).forEach(key => {
+                            if (fileSystem[key] && data.disciplines[key]) {
+                                fileSystem[key] = {
+                                    ...fileSystem[key],
+                                    ...data.disciplines[key]
+                                };
+                            }
+                        });
+                        
+                        // Atualiza as estatísticas nos cards
+                        updateDisciplineStats();
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao carregar dados:', error);
+            }
+        }
+
+        // Atualiza as estatísticas das disciplinas
+        function updateDisciplineStats() {
+            // Arquitetura
+            if (fileSystem.architecture) {
+                document.getElementById('arch-files').textContent = fileSystem.architecture.total_files || 0;
+                document.getElementById('arch-folders').textContent = fileSystem.architecture.folders?.length || 0;
+                document.getElementById('arch-size').textContent = fileSystem.architecture.total_size || '0MB';
+            }
+            
+            // Estrutura
+            if (fileSystem.structure) {
+                document.getElementById('struct-files').textContent = fileSystem.structure.total_files || 0;
+                document.getElementById('struct-folders').textContent = fileSystem.structure.folders?.length || 0;
+                document.getElementById('struct-size').textContent = fileSystem.structure.total_size || '0MB';
+            }
+            
+            // Hidráulica
+            if (fileSystem.hydraulic) {
+                document.getElementById('hydro-files').textContent = fileSystem.hydraulic.total_files || 0;
+                document.getElementById('hydro-folders').textContent = fileSystem.hydraulic.folders?.length || 0;
+                document.getElementById('hydro-size').textContent = fileSystem.hydraulic.total_size || '0MB';
+            }
+            
+            // Metálica
+            if (fileSystem.metallic) {
+                document.getElementById('metal-files').textContent = fileSystem.metallic.total_files || 0;
+                document.getElementById('metal-folders').textContent = fileSystem.metallic.folders?.length || 0;
+                document.getElementById('metal-size').textContent = fileSystem.metallic.total_size || '0MB';
+            }
+        }
 
         // Load saved notes from localStorage
         function loadSavedNotes() {
@@ -1209,19 +1341,27 @@
             modal.classList.add('active');
             
             try {
-                if (CONFIG.useLocalMode) {
-                    // For local mode, we would use fs API or electron
-                    await simulateSync();
-                } else {
-                    // For cloud mode, use Google Drive API
-                    await syncWithGoogleDrive();
-                }
+                // Chama a API de refresh
+                const response = await fetch('/api/refresh', {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
                 
-                console.log('[SYNC] Files synchronized successfully');
+                if (response.ok) {
+                    console.log('[SYNC] Sincronização iniciada com sucesso');
+                    
+                    // Aguarda um pouco e recarrega os dados
+                    setTimeout(async () => {
+                        await loadInitialData();
+                        btn.classList.remove('syncing');
+                        modal.classList.remove('active');
+                    }, 3000);
+                } else {
+                    throw new Error('Falha na sincronização');
+                }
             } catch (error) {
                 console.error('[SYNC] Error:', error);
-                alert('Sync failed. Check console for details.');
-            } finally {
+                alert('Falha na sincronização. Verifique o console para detalhes.');
                 btn.classList.remove('syncing');
                 modal.classList.remove('active');
             }
@@ -1237,12 +1377,6 @@
             });
         }
 
-        // Google Drive sync (placeholder)
-        async function syncWithGoogleDrive() {
-            // This would implement actual Google Drive API integration
-            console.log('[SYNC] Google Drive sync not implemented yet');
-            return simulateSync();
-        }
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {

@@ -11,10 +11,29 @@ const FILE_LOADER_CONFIG = {
     autoRefresh: true
 };
 
+// Função para obter headers de autenticação
+function getAuthHeaders() {
+    const token = localStorage.getItem('access_token');
+    return {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+    };
+}
+
 // Função para carregar dados da API
 async function loadFileData() {
     try {
-        const response = await fetch(`${FILE_LOADER_CONFIG.apiUrl}/api/files`);
+        const response = await fetch(`${FILE_LOADER_CONFIG.apiUrl}/api/files`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (response.status === 401) {
+            // Token inválido ou expirado
+            console.error('[FILE_LOADER] Não autorizado - redirecionando para login');
+            window.location.href = '/login';
+            return;
+        }
+        
         if (!response.ok) {
             throw new Error('Erro ao carregar dados');
         }
@@ -136,10 +155,15 @@ window.syncFiles = async function() {
         // Chamar API de refresh
         const response = await fetch(`${FILE_LOADER_CONFIG.apiUrl}/api/refresh`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            headers: getAuthHeaders()
         });
+        
+        if (response.status === 401) {
+            // Token inválido ou expirado
+            console.error('[SYNC] Não autorizado - redirecionando para login');
+            window.location.href = '/login';
+            return;
+        }
         
         if (!response.ok) {
             throw new Error('Erro ao sincronizar');
@@ -169,9 +193,7 @@ window.saveNote = async function(discipline, fileName, note) {
             `${FILE_LOADER_CONFIG.apiUrl}/api/notes/${discipline}/${encodeURIComponent(fileName)}`,
             {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ content: note })
             }
         );
@@ -227,6 +249,13 @@ document.head.appendChild(style);
 
 // Carregar dados ao iniciar
 document.addEventListener('DOMContentLoaded', () => {
+    // Verificar se está autenticado antes de carregar dados
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+        console.log('[FILE_LOADER] Não autenticado - aguardando login');
+        return;
+    }
+    
     // Aguardar inicialização
     setTimeout(() => {
         loadFileData();
