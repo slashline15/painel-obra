@@ -953,52 +953,13 @@
             autoSyncInterval: 300000 // 5 minutes
         };
 
-        // File system structure (mock data for now)
-        const fileSystem = {
-            architecture: {
-                name: 'ARQUITETURA',
-                path: 'ARQUITETURA',
-                files: [
-                    // Root files
-                    { name: '1001-1004 - PLANTAS TERREO.dwg', type: 'dwg', size: '8.7MB', modified: '2025-03-14', path: '' },
-                    { name: '1005-1008 - PLANTAS 1 PAVIMENTO.DWG', type: 'dwg', size: '11.6MB', modified: '2025-07-01', path: '' },
-                    { name: '1013-1018 - PLANTAS DE COBERTURA.DWG', type: 'dwg', size: '13.3MB', modified: '2025-07-01', path: '' },
-                    { name: '1019 - DETALHES BANHEIROS TÉRREO, 1º E 2º PAVIMENTOS E COBERTURA 2.dwg', type: 'dwg', size: '5.0MB', modified: '2025-07-01', path: '' },
-                    { name: '1019 - DETALHES BANHEIROS TÉRREO, 1º E 2º PAVIMENTOS E COBERTURA.dwg', type: 'dwg', size: '5.2MB', modified: '2025-07-01', path: '' },
-                    { name: '1020-2021 - ELEVAÇÕES.dwg', type: 'dwg', size: '8.0MB', modified: '2025-07-01', path: '' },
-                    { name: '1023-1026 - PLANTAS 2 PAVIMENTO.DWG', type: 'dwg', size: '22.4MB', modified: '2025-07-01', path: '' },
-                    { name: '1027-1030 - PLANTAS DE FORRO.dwg', type: 'dwg', size: '11.0MB', modified: '2025-07-01', path: '' },
-                    // PAV-TERREO
-                    { name: '1001 - PLANTA TÉRREO - ATUAL E DEMOLIÇÃO.pdf', type: 'pdf', size: '1.2MB', modified: '2025-07-01', path: 'PAV-TERREO' },
-                    { name: '1002 - PLANTA TÉRREO - CONSTRUÇÃO E LAYOUT.pdf', type: 'pdf', size: '1.8MB', modified: '2025-07-01', path: 'PAV-TERREO' },
-                    { name: '1003- PLANTA 1 º PAVIMENTO - ATUAL E DEMOLIÇÃO.pdf', type: 'pdf', size: '0.4MB', modified: '2025-07-01', path: 'PAV-TERREO' },
-                    { name: '1004 - PLANTA 1º PAVIMENTO - CONSTRUÇÃO E LAYOUT.pdf', type: 'pdf', size: '0.9MB', modified: '2025-07-01', path: 'PAV-TERREO' },
-                    { name: '1023 - PLANTA TERREO -  PAGINAÇÃO DE PISO.pdf', type: 'pdf', size: '0.4MB', modified: '2025-07-01', path: 'PAV-TERREO' },
-                    { name: '1027 - PLANTA DE FORRO - TÉRREO E 1º PAVIMENTO.pdf', type: 'pdf', size: '0.6MB', modified: '2025-07-01', path: 'PAV-TERREO' },
-                    { name: 'HDAM.PADM.PB.1001E1002.TERREO.R05.dwg', type: 'dwg', size: '8.7MB', modified: '2025-03-14', path: 'PAV-TERREO' },
-                    // Continue with other folders...
-                ],
-                folders: ['PAV-TERREO', 'PAV1', 'PAV2', 'PAV-COB', 'CORTES E ELEVAÇÕES', 'BANHEIROS']
-            },
-            structure: {
-                name: 'ESTRUTURA',
-                path: 'ESTRUTURA',
-                files: [],
-                folders: []
-            },
-            hydraulic: {
-                name: 'HIDRÁULICA',
-                path: 'HIDRAULICA',
-                files: [],
-                folders: []
-            },
-            metallic: {
-                name: 'METÁLICA',
-                path: 'METALICA',
-                files: [],
-                folders: []
-            }
-        };
+        // File system will be loaded from API
+        let fileSystem = {
+            architecture: { name: 'ARQUITETURA', files: [], folders: [] },
+            structure: { name: 'ESTRUTURA', files: [], folders: [] },
+            hydraulic: { name: 'HIDRÁULICA', files: [], folders: [] },
+            metallic: { name: 'METÁLICA', files: [], folders: [] }
+};
 
         // Current state
         let currentDiscipline = null;

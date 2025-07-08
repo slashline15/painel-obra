@@ -1,24 +1,22 @@
 /**
- * HDAM File Loader - Integração com o scanner Python
- * 
- * Este script deve ser incluído no HTML após o script principal
- * Ele carrega os dados do arquivo JSON gerado pelo Python
+ * HDAM File Loader - Integração com API FastAPI
  */
 
 // Configuração
 const FILE_LOADER_CONFIG = {
-    dataFile: 'file_data.json',
-    notesFile: 'file_notes.json',
-    refreshInterval: 30000, // 30 segundos
+    apiUrl: window.location.hostname === 'localhost' 
+        ? 'http://localhost:8000' 
+        : 'https://api.dimensaoc137.org',  // ← MUDE AQUI
+    refreshInterval: 30000,
     autoRefresh: true
 };
 
-// Função para carregar dados do arquivo JSON
+// Função para carregar dados da API
 async function loadFileData() {
     try {
-        const response = await fetch(FILE_LOADER_CONFIG.dataFile + '?t=' + Date.now());
+        const response = await fetch(`${FILE_LOADER_CONFIG.apiUrl}/api/files`);
         if (!response.ok) {
-            throw new Error('Arquivo não encontrado');
+            throw new Error('Erro ao carregar dados');
         }
         
         const data = await response.json();
@@ -27,8 +25,10 @@ async function loadFileData() {
         if (data.disciplines) {
             Object.keys(data.disciplines).forEach(key => {
                 if (fileSystem[key]) {
-                    fileSystem[key].files = data.disciplines[key].files || [];
-                    fileSystem[key].folders = data.disciplines[key].folders || [];
+                    fileSystem[key] = {
+                        ...fileSystem[key],
+                        ...data.disciplines[key]
+                    };
                     
                     // Atualizar estatísticas nos cards
                     updateDisciplineStats(key, data.disciplines[key]);
@@ -44,23 +44,52 @@ async function loadFileData() {
         console.log('[FILE_LOADER] Dados carregados:', new Date().toLocaleTimeString());
         
         // Atualizar indicador de sync
-        const syncIndicator = document.getElementById('syncStatus');
-        if (syncIndicator) {
-            const dot = syncIndicator.querySelector('.status-dot');
-            dot.classList.remove('local', 'sync');
+        updateSyncIndicator('synced');
+        
+    } catch (error) {
+        console.error('[FILE_LOADER] Erro ao carregar dados:', error);
+        updateSyncIndicator('error');
+    }
+}
+
+// Função para atualizar indicador de sincronização
+function updateSyncIndicator(status) {
+    const syncIndicator = document.getElementById('syncStatus');
+    if (!syncIndicator) return;
+    
+    const dot = syncIndicator.querySelector('.status-dot');
+    const text = syncIndicator.querySelector('span');
+    
+    switch(status) {
+        case 'synced':
+            dot.classList.remove('local', 'sync', 'error');
             dot.classList.add('sync');
-            syncIndicator.querySelector('span').textContent = 'SYNCED';
+            text.textContent = 'SYNCED';
             
             // Voltar ao estado normal após 2 segundos
             setTimeout(() => {
                 dot.classList.remove('sync');
                 dot.classList.add('local');
-                syncIndicator.querySelector('span').textContent = 'LOCAL MODE';
+                text.textContent = 'API MODE';
             }, 2000);
-        }
-        
-    } catch (error) {
-        console.error('[FILE_LOADER] Erro ao carregar dados:', error);
+            break;
+            
+        case 'syncing':
+            dot.classList.remove('local', 'sync', 'error');
+            dot.classList.add('sync');
+            text.textContent = 'SYNCING...';
+            break;
+            
+        case 'error':
+            dot.classList.remove('local', 'sync');
+            dot.classList.add('error');
+            text.textContent = 'SYNC ERROR';
+            break;
+            
+        default:
+            dot.classList.remove('sync', 'error');
+            dot.classList.add('local');
+            text.textContent = 'API MODE';
     }
 }
 
@@ -77,60 +106,81 @@ function updateDisciplineStats(discipline, data) {
     if (!prefix) return;
     
     // Atualizar contadores
-    const filesElement = document.getElementById(`${prefix}-files`);
-    const foldersElement = document.getElementById(`${prefix}-folders`);
-    const sizeElement = document.getElementById(`${prefix}-size`);
+    const elements = {
+        files: document.getElementById(`${prefix}-files`),
+        folders: document.getElementById(`${prefix}-folders`),
+        size: document.getElementById(`${prefix}-size`)
+    };
     
-    if (filesElement) {
-        filesElement.textContent = data.total_files || 0;
+    if (elements.files) {
+        elements.files.textContent = data.total_files || 0;
     }
-    if (foldersElement) {
-        foldersElement.textContent = data.folders ? data.folders.length : 0;
+    if (elements.folders) {
+        elements.folders.textContent = data.folders ? data.folders.length : 0;
     }
-    if (sizeElement) {
-        sizeElement.textContent = data.total_size || '0MB';
+    if (elements.size) {
+        elements.size.textContent = data.total_size || '0MB';
     }
 }
 
-// Sobrescrever a função syncFiles para usar o loader
-const originalSyncFiles = window.syncFiles;
+// Sobrescrever a função syncFiles
 window.syncFiles = async function() {
     const btn = document.getElementById('syncBtn');
     const modal = document.getElementById('loadingModal');
     
     btn.classList.add('syncing');
     modal.classList.add('active');
+    updateSyncIndicator('syncing');
     
     try {
+        // Chamar API de refresh
+        const response = await fetch(`${FILE_LOADER_CONFIG.apiUrl}/api/refresh`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Erro ao sincronizar');
+        }
+        
+        // Aguardar o backend processar
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Recarregar dados
         await loadFileData();
+        
         console.log('[SYNC] Sincronização completa');
     } catch (error) {
         console.error('[SYNC] Erro:', error);
-        alert('Erro na sincronização. Verifique se o scanner Python está rodando.');
+        alert('Erro na sincronização. Verifique se o servidor está rodando.');
+        updateSyncIndicator('error');
     } finally {
         btn.classList.remove('syncing');
         modal.classList.remove('active');
     }
 };
 
-// Carregar dados ao iniciar
-document.addEventListener('DOMContentLoaded', () => {
-    // Aguardar um pouco para garantir que tudo foi inicializado
-    setTimeout(() => {
-        loadFileData();
-        
-        // Auto-refresh se habilitado
-        if (FILE_LOADER_CONFIG.autoRefresh) {
-            setInterval(loadFileData, FILE_LOADER_CONFIG.refreshInterval);
-        }
-    }, 500);
-});
-
-// Função para salvar notas via requisição
-async function saveNoteToFile(discipline, fileName, note) {
+// Função para salvar notas via API
+window.saveNote = async function(discipline, fileName, note) {
     try {
-        // Em produção, isso seria uma chamada para um servidor
-        // Por enquanto, apenas salva no localStorage
+        const response = await fetch(
+            `${FILE_LOADER_CONFIG.apiUrl}/api/notes/${discipline}/${encodeURIComponent(fileName)}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ content: note })
+            }
+        );
+        
+        if (!response.ok) {
+            throw new Error('Erro ao salvar nota');
+        }
+        
+        // Também salvar localmente para cache
         const savedNotes = localStorage.getItem('fileNotes');
         const notes = savedNotes ? JSON.parse(savedNotes) : {};
         const noteKey = `${discipline}_${fileName}`;
@@ -143,31 +193,49 @@ async function saveNoteToFile(discipline, fileName, note) {
         
         localStorage.setItem('fileNotes', JSON.stringify(notes));
         
-        // Se tiver um servidor rodando, enviar para ele
-        if (window.location.protocol !== 'file:') {
-            try {
-                await fetch('/api/notes', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        discipline,
-                        fileName,
-                        note
-                    })
-                });
-            } catch (e) {
-                // Ignorar erro se não houver servidor
-            }
-        }
-        
     } catch (error) {
         console.error('[NOTES] Erro ao salvar nota:', error);
+        // Fallback para localStorage apenas
+        saveNoteToLocalStorage(discipline, fileName, note);
     }
+};
+
+// Fallback para localStorage
+function saveNoteToLocalStorage(discipline, fileName, note) {
+    const savedNotes = localStorage.getItem('fileNotes');
+    const notes = savedNotes ? JSON.parse(savedNotes) : {};
+    const noteKey = `${discipline}_${fileName}`;
+    
+    if (note.trim()) {
+        notes[noteKey] = note;
+    } else {
+        delete notes[noteKey];
+    }
+    
+    localStorage.setItem('fileNotes', JSON.stringify(notes));
 }
 
-// Sobrescrever a função saveNote original
-window.saveNote = saveNoteToFile;
+// Adicionar estilo para indicador de erro
+const style = document.createElement('style');
+style.textContent = `
+    .status-dot.error {
+        background: var(--matrix-red);
+        box-shadow: 0 0 10px var(--matrix-red);
+    }
+`;
+document.head.appendChild(style);
 
-console.log('[FILE_LOADER] Script de integração carregado');
+// Carregar dados ao iniciar
+document.addEventListener('DOMContentLoaded', () => {
+    // Aguardar inicialização
+    setTimeout(() => {
+        loadFileData();
+        
+        // Auto-refresh se habilitado
+        if (FILE_LOADER_CONFIG.autoRefresh) {
+            setInterval(loadFileData, FILE_LOADER_CONFIG.refreshInterval);
+        }
+    }, 500);
+});
+
+console.log('[FILE_LOADER] Script de integração API carregado');

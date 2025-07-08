@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-HDAM File Scanner - Sincronização de arquivos locais
-Escaneia a pasta do projeto e gera um JSON para o painel web
+HDAM File Scanner - Módulo reutilizável
 """
 
 import os
@@ -10,24 +9,8 @@ import time
 import hashlib
 from datetime import datetime
 from pathlib import Path
-import argparse
 import logging
 
-# Configuração
-CONFIG = {
-    "base_path": r"I:\\Meu Drive\\DRIVE PREDIO ADM",
-    "output_file": "file_data.json",
-    "notes_file": "file_notes.json",
-    "scan_interval": 60,  # segundos
-    "disciplines": {
-        "architecture": {"name": "ARQUITETURA", "path": "ARQUITETURA"},
-        "structure": {"name": "ESTRUTURA", "path": "ESTRUTURA"},
-        "hydraulic": {"name": "HIDRÁULICA", "path": "HIDRAULICA"},
-        "metallic": {"name": "METÁLICA", "path": "METALICA"}
-    }
-}
-
-# Configurar logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
@@ -35,10 +18,18 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class FileScanner:
-    def __init__(self, base_path: Path, config):
+    def __init__(self, base_path: Path, config=None):
         self.base_path = Path(base_path)
-        self.config = config
-        self.base_path = Path(config["base_path"])
+        self.config = config or {
+            "output_file": "file_data.json",
+            "notes_file": "file_notes.json",
+            "disciplines": {
+                "architecture": {"name": "ARQUITETURA", "path": "ARQUITETURA"},
+                "structure": {"name": "ESTRUTURA", "path": "ESTRUTURA"},
+                "hydraulic": {"name": "HIDRÁULICA", "path": "HIDRAULICA"},
+                "metallic": {"name": "METÁLICA", "path": "METALICA"}
+            }
+        }
         self.notes = self.load_notes()
         
     def load_notes(self):
@@ -64,7 +55,7 @@ class FileScanner:
         """Gera hash MD5 do arquivo para detectar mudanças"""
         try:
             with open(filepath, 'rb') as f:
-                return hashlib.md5(f.read(1024 * 1024)).hexdigest()  # Lê apenas 1MB
+                return hashlib.md5(f.read(1024 * 1024)).hexdigest()
         except:
             return None
     
@@ -111,7 +102,7 @@ class FileScanner:
                                 "modified": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d"),
                                 "modified_timestamp": stat.st_mtime,
                                 "path": folder_path,
-                                "full_path": str(relative_path),
+                                "full_path": str(relative_path).replace('\\', '/'),
                                 "hash": self.get_file_hash(item)
                             }
                             
@@ -174,126 +165,15 @@ class FileScanner:
         
         return result
     
-    def save_results(self, data):
-        """Salva resultados em arquivo JSON"""
-        output_path = Path(self.config["output_file"])
-        try:
-            with open(output_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            logger.info(f"Dados salvos em: {output_path.absolute()}")
-        except Exception as e:
-            logger.error(f"Erro ao salvar dados: {e}")
-    
-    def detect_changes(self, old_data, new_data):
-        """Detecta mudanças entre scans"""
-        changes = {
-            "new_files": [],
-            "modified_files": [],
-            "deleted_files": []
-        }
-        
-        if not old_data:
-            return changes
-        
-        for disc_key in new_data["disciplines"]:
-            old_files = {}
-            new_files = {}
-            
-            if disc_key in old_data.get("disciplines", {}):
-                for f in old_data["disciplines"][disc_key].get("files", []):
-                    old_files[f["name"]] = f
-            
-            for f in new_data["disciplines"][disc_key].get("files", []):
-                new_files[f["name"]] = f
-            
-            # Novos arquivos
-            for name, file_info in new_files.items():
-                if name not in old_files:
-                    changes["new_files"].append(f"{disc_key}/{name}")
-                elif file_info.get("hash") != old_files[name].get("hash"):
-                    changes["modified_files"].append(f"{disc_key}/{name}")
-            
-            # Arquivos deletados
-            for name in old_files:
-                if name not in new_files:
-                    changes["deleted_files"].append(f"{disc_key}/{name}")
-        
-        return changes
-    
     def run_once(self):
-        """Executa um scan único"""
+        """Executa um scan único e retorna os dados"""
         logger.info("Iniciando scan...")
         start_time = time.time()
         
-        # Carregar dados anteriores
-        old_data = None
-        if Path(self.config["output_file"]).exists():
-            try:
-                with open(self.config["output_file"], 'r', encoding='utf-8') as f:
-                    old_data = json.load(f)
-            except:
-                pass
-        
-        # Executar scan
         data = self.scan_all_disciplines()
-        
-        # Detectar mudanças
-        if old_data:
-            changes = self.detect_changes(old_data, data)
-            if any(changes.values()):
-                logger.info("Mudanças detectadas:")
-                if changes["new_files"]:
-                    logger.info(f"  → Novos: {', '.join(changes['new_files'][:5])}")
-                if changes["modified_files"]:
-                    logger.info(f"  → Modificados: {', '.join(changes['modified_files'][:5])}")
-                if changes["deleted_files"]:
-                    logger.info(f"  → Deletados: {', '.join(changes['deleted_files'][:5])}")
-        
-        # Salvar resultados
-        self.save_results(data)
         self.save_notes()
         
         elapsed = time.time() - start_time
         logger.info(f"Scan completo em {elapsed:.2f}s")
         
         return data
-    
-    def run_continuous(self):
-        """Executa scan contínuo"""
-        logger.info(f"Modo contínuo - scan a cada {self.config['scan_interval']}s")
-        logger.info("Pressione Ctrl+C para parar")
-        
-        try:
-            while True:
-                self.run_once()
-                time.sleep(self.config["scan_interval"])
-        except KeyboardInterrupt:
-            logger.info("\nParando scanner...")
-
-def main():
-    parser = argparse.ArgumentParser(description="HDAM File Scanner")
-    parser.add_argument('--once', action='store_true', help='Executar apenas uma vez')
-    parser.add_argument('--path', help='Caminho base alternativo')
-    parser.add_argument('--output', help='Arquivo de saída alternativo')
-    parser.add_argument('--interval', type=int, help='Intervalo de scan em segundos')
-    args = parser.parse_args()
-    
-    # Aplicar argumentos
-    if args.path:
-        CONFIG["base_path"] = args.path
-    if args.output:
-        CONFIG["output_file"] = args.output
-    if args.interval:
-        CONFIG["scan_interval"] = args.interval
-    
-    # Criar scanner
-    scanner = FileScanner(CONFIG)
-    
-    # Executar
-    if args.once:
-        scanner.run_once()
-    else:
-        scanner.run_continuous()
-
-if __name__ == "__main__":
-    main()
