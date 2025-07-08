@@ -6,8 +6,8 @@
 const FILE_LOADER_CONFIG = {
     apiUrl: window.location.hostname === 'localhost' 
         ? 'http://localhost:8000' 
-        : 'https://api.dimensaoc137.org',  // ← MUDE AQUI
-    refreshInterval: 30000,
+        : 'https://api.dimensaoc137.org',  // ← SEU DOMÍNIO
+    refreshInterval: 30000, // 30 segundos
     autoRefresh: true
 };
 

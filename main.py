@@ -9,7 +9,6 @@ import asyncio
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
-import os
 
 # Detectar se está no railway
 IS_PRODUCTION = os.getenv("RAILWAY_ENVIRONMENT") is not None
@@ -78,12 +77,8 @@ app.add_middleware(
 )
 
 # Servir arquivos estáticos (HTML, JS, CSS)
-app.mount("/static", StaticFiles(directory="."), name="static")
-
-@app.get("/")
-async def root():
-    """Redireciona para o index.html"""
-    return {"message": "HDAM Control API - Use /index.html"}
+# REMOVE a rota "/" e monta os estáticos na raiz
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
 
 @app.get("/api/files")
 async def get_files():
