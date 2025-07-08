@@ -1,126 +1,128 @@
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pathlib import Path
-from scanner import FileScanner
 import json
 import os
 import asyncio
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
-
-# Detectar se está no railway
-IS_PRODUCTION = os.getenv("RAILWAY_ENVIRONMENT") is not None
-
-# Se produção, desabilita reload
-if IS_PRODUCTION:
-    # Railway vai setar a PORT automaticamente
-    port = int(os.environ.get("PORT", 8000))
+from drive_scanner import DriveScanner
 
 # Carregar variáveis de ambiente
 load_dotenv()
 
-# Configuração
-BASE_PATH = os.getenv("BASE_PATH", r"I:\Meu Drive\DRIVE PREDIO ADM")
-SCAN_INTERVAL = int(os.getenv("SCAN_INTERVAL", 300))
+# --- Configuração ---
+IS_PRODUCTION = os.getenv("RENDER", "false").lower() == "true"
+SCAN_INTERVAL = int(os.getenv("SCAN_INTERVAL", 900))  # 15 minutos
 JSON_PATH = Path("file_data.json")
+GOOGLE_CREDS_JSON = os.getenv("GOOGLE_CREDS_JSON")
 
-# Criar scanner
-scanner = FileScanner(BASE_PATH)
+# --- Validação de Credenciais ---
+if not GOOGLE_CREDS_JSON:
+    raise ValueError("A variável de ambiente GOOGLE_CREDS_JSON não foi definida.")
 
-# Scheduler global
+try:
+    credentials_info = json.loads(GOOGLE_CREDS_JSON)
+except json.JSONDecodeError:
+    raise ValueError("GOOGLE_CREDS_JSON não é um JSON válido.")
+
+# --- Scanner ---
+scanner = DriveScanner(credentials_info)
 scheduler = AsyncIOScheduler()
 
-def do_local_scan():
-    """Executa scan local e salva no JSON"""
+def do_drive_scan():
+    """Executa o scan do Google Drive e salva o resultado em JSON."""
     try:
         data = scanner.run_once()
         with open(JSON_PATH, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-        print(f"Scan salvo em {JSON_PATH}")
+        print(f"Scan do Drive salvo com sucesso em {JSON_PATH}")
     except Exception as e:
-        print(f"Erro no scan: {e}")
+        print(f"Erro durante o scan do Drive: {e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Gerencia ciclo de vida da aplicação"""
-    # Startup
-    print("Iniciando servidor HDAM...")
+    """Gerencia o ciclo de vida da aplicação."""
+    print("Iniciando servidor HDAM Control...")
     
-    # Faz scan inicial
-    do_local_scan()
+    # Executa o primeiro scan imediatamente
+    do_drive_scan()
     
-    # Configura scheduler
-    scheduler.add_job(do_local_scan, 'interval', seconds=SCAN_INTERVAL)
+    # Agenda scans recorrentes
+    scheduler.add_job(do_drive_scan, 'interval', seconds=SCAN_INTERVAL)
     scheduler.start()
     
     yield
     
-    # Shutdown
+    # Desliga o scheduler ao finalizar
+    print("Desligando scheduler...")
     scheduler.shutdown()
 
-# Criar app FastAPI
+# --- Aplicação FastAPI ---
 app = FastAPI(
     title="HDAM Control API",
-    version="1.0.0",
+    version="2.0.0",
+    description="API para servir arquivos de projeto do Google Drive.",
     lifespan=lifespan
 )
 
-# CORS - permite acesso do frontend
-app.add_middleware(
+# --- Middlewares ---
+# Em produção, restrinja as origens para o seu domínio
+allowed_origins = [os.getenv("FRONTEND_URL", "*")]
+app.add_middleware (
     CORSMiddleware,
-    allow_origins=["*"],  # Em produção, especifique seu domínio
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*"]
 )
 
-# Servir arquivos estáticos (HTML, JS, CSS)
-# REMOVE a rota "/" e monta os estáticos na raiz
-app.mount("/", StaticFiles(directory=".", html=True), name="static")
-
+# --- Rotas da API ---
 @app.get("/api/files")
 async def get_files():
-    """Retorna dados dos arquivos"""
+    """Retorna os dados dos arquivos cacheados do Drive."""
     if not JSON_PATH.exists():
-        do_local_scan()
-    
+        return {"error": "Cache de arquivos ainda não foi criado.", "disciplines": {}}
     try:
         with open(JSON_PATH, 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception as e:
-        return {"error": str(e), "disciplines": {}}
+        raise HTTPException(status_code=500, detail=f"Erro ao ler cache: {e}")
 
 @app.post("/api/refresh")
 async def refresh_files(background_tasks: BackgroundTasks):
-    """Força atualização dos arquivos"""
-    background_tasks.add_task(do_local_scan)
-    return {"status": "refresh iniciado", "message": "Aguarde alguns segundos"}
+    """Dispara uma nova varredura do Google Drive em segundo plano."""
+    background_tasks.add_task(do_drive_scan)
+    return {"status": "success", "message": "Atualização iniciada em segundo plano."}
 
 @app.get("/api/status")
 async def get_status():
-    """Status do sistema"""
+    """Retorna o status do sistema."""
     return {
         "status": "online",
-        "base_path": BASE_PATH,
-        "scan_interval": SCAN_INTERVAL,
-        "last_scan": JSON_PATH.stat().st_mtime if JSON_PATH.exists() else None
+        "service": "Google Drive Mode",
+        "scan_interval_seconds": SCAN_INTERVAL,
+        "last_scan_timestamp": JSON_PATH.stat().st_mtime if JSON_PATH.exists() else None
     }
 
-@app.post("/api/notes/{discipline}/{filename}")
-async def save_note(discipline: str, filename: str, note: dict):
-    """Salva nota para um arquivo"""
-    try:
-        notes = scanner.notes
-        note_key = f"{discipline}_{filename}"
+# --- Servir Arquivos Estáticos ---
+# Deve vir depois das rotas da API para não sobrescrevê-las
+@app.get("/{full_path:path}")
+async def serve_static(full_path: str):
+    """Serve o index.html ou outros arquivos estáticos."""
+    path = Path(full_path).as_posix()
+    if path == "" or path == "/":
+        path = "index.html"
+    
+    static_file = Path(__file__).parent / path
+    if static_file.exists():
+        return FileResponse(static_file)
+    
+    # Fallback para o index.html para rotas de SPA (Single Page Application)
+    index_path = Path(__file__).parent / "index.html"
+    if index_path.exists():
+        return FileResponse(index_path)
         
-        if note.get("content"):
-            notes[note_key] = note["content"]
-        else:
-            notes.pop(note_key, None)
-        
-        scanner.save_notes()
-        return {"status": "ok"}
-    except Exception as e:
-        return {"error": str(e)}
+    raise HTTPException(status_code=404, detail="Arquivo estático não encontrado.")
