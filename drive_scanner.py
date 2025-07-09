@@ -15,10 +15,10 @@ class DriveScanner:
         self.config = config or {
             "notes_file": "file_notes.json",
             "disciplines": {
-                "architecture": {"name": "ARQUITETURA", "folder_id": "1ERp2VogX3C-Xh_pOfORRvXRN-_twFoZq"},
-                "structure": {"name": "ESTRUTURA", "folder_id": "YOUR_STRUCTURE_FOLDER_ID"},
-                "hydraulic": {"name": "HIDRÁULICA", "folder_id": "YOUR_HYDRAULIC_FOLDER_ID"},
-                "metallic": {"name": "METÁLICA", "folder_id": "YOUR_METALLIC_FOLDER_ID"}
+                "architecture": {"name": "ARQUITETURA", "folder_id": "1oRMrzCi1qL-VDVgkUyEvKljudgC0CE-B"},
+                "structure": {"name": "ESTRUTURA", "folder_id": "1LdQTFTZP6WpoGOKYq7NL3WZNPyOubSPU"},
+                "hydraulic": {"name": "HIDRÁULICA", "folder_id": "11Irj4LA0UvSwnElMo0pRHoE8SVvtFo6o"},
+                "metallic": {"name": "METÁLICA", "folder_id": "10ZX1ZSv71nCtmuGv2De0Vzxb01gLRs_g"}
             }
         }
         self.notes = self.load_notes()

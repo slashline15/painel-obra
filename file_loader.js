@@ -4,9 +4,9 @@
 
 // Configuração
 const FILE_LOADER_CONFIG = {
-    apiUrl: location.hostname === 'localhost'
+    apiUrl: window.location.hostname === 'localhost'
         ? 'http://localhost:8000'
-        : 'https://api.engdaniel.org',
+        : 'https://engdaniel.org',  // Mudando para o domínio correto
     refreshInterval: 30000, // 30 segundos
     autoRefresh: true
 };

@@ -183,40 +183,27 @@ async def get_status(current_user: dict = Depends(get_current_user)):
     }
 
 # --- Servir Arquivos Estáticos ---
-# Deve vir depois das rotas da API para não sobrescrevê-las
+# Arquivos estáticos são públicos - a proteção é feita pelo JavaScript
 @app.get("/{full_path:path}")
-async def serve_static(
-    full_path: str,
-    current_user: dict = Depends(get_current_user_optional)
-):
-    """Serve o index.html ou outros arquivos estáticos."""
-    path = Path(full_path).as_posix()
+async def serve_static(full_path: str):
+    """Serve arquivos estáticos sem autenticação."""
+    path = Path(full_path).as_posix() or "index.html"
     
-    # Permite acesso à página de login sem autenticação
+    # Mapear rotas especiais
     if path in ["login", "login.html", "login/"]:
-        login_path = Path(__file__).parent / "login.html"
-        if login_path.exists():
-            return FileResponse(login_path)
-    
-    # Para todas as outras rotas, verifica autenticação
-    if not current_user:
-        # Redireciona para a página de login se não estiver autenticado
-        if path == "" or path == "/" or path == "index.html":
-            return RedirectResponse(url="/login", status_code=302)
-        # Para outros arquivos estáticos, retorna 401
-        raise HTTPException(status_code=401, detail="Não autorizado")
-    
-    # Usuário autenticado - serve os arquivos normalmente
-    if path == "" or path == "/":
+        path = "login.html"
+    elif path == "" or path == "/":
         path = "index.html"
     
     static_file = Path(__file__).parent / path
-    if static_file.exists():
+    
+    # Se o arquivo existe, serve ele
+    if static_file.exists() and static_file.is_file():
         return FileResponse(static_file)
     
-    # Fallback para o index.html para rotas de SPA (Single Page Application)
+    # Fallback para index.html (SPA)
     index_path = Path(__file__).parent / "index.html"
     if index_path.exists():
         return FileResponse(index_path)
         
-    raise HTTPException(status_code=404, detail="Arquivo estático não encontrado.")
+    raise HTTPException(status_code=404, detail="Arquivo não encontrado")
