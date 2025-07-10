@@ -121,10 +121,15 @@
             100% { transform: translateX(100%); }
         }
 
+        /* Dentro da sua tag <style> */
+
         .logo-section {
             margin-bottom: 2rem;
-        }
-
+            display: flex; /* Adicione esta linha */
+            justify-content: center; /* Adicione para centralizar os logos */
+            align-items: center; /* Adicione para alinhar verticalmente */
+            gap: 1rem; /* Adicione para criar um espaço entre os logos */
+        }   
         .logo-frame {
             display: inline-block;
             background: var(--matrix-black);
