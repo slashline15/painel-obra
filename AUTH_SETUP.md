@@ -38,9 +38,9 @@ Edite o arquivo `authorized_emails.json`:
 ```json
 {
   "authorized_emails": [
-    "usuario1@gmail.com",
-    "usuario2@empresa.com",
-    "usuario3@gmail.com"
+    "daniel.hoss67@gmail.com",
+    "daniel.alves@hoss.com.br",
+    "slashline15@gmail.com"
   ]
 }
 ```
